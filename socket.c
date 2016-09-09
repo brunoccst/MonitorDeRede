@@ -15,6 +15,15 @@
 
 #include <net/if.h>  //estrutura ifr
 #include <netinet/ether.h> //header ethernet
+#include <net/ethernet.h> //header ethernet
+#include <netinet/ip.h> //header ipv4
+#include <netinet/ip6.h> //header ipv6
+#include <netinet/udp.h> //header udp
+#include <netinet/tcp.h> //header tcp
+#include <netinet/ip_icmp.h> //header icmp
+#include <netinet/icmp6.h> //header icmp6
+#include <net/if_arp.h> //header arp
+//TODO: Adicionar o header dns
 #include <netinet/in.h> //definicao de protocolos
 #include <arpa/inet.h> //funcoes para manipulacao de enderecos IP
 
@@ -30,6 +39,19 @@
   int sockd;
   int on;
   struct ifreq ifr;
+
+struct ether_header ethernet;
+
+void printEthernet(){
+	printf("MAC Destino: %x:%x:%x:%x:%x:%x \n", ethernet.ether_dhost[0],ethernet.ether_dhost[1],ethernet.ether_dhost[2],ethernet.ether_dhost[3],ethernet.ether_dhost[4],ethernet.ether_dhost[5]);
+	printf("MAC Origem: %x:%x:%x:%x:%x:%x \n", ethernet.ether_shost[0],ethernet.ether_shost[1],ethernet.ether_shost[2],ethernet.ether_shost[3],ethernet.ether_shost[4],ethernet.ether_shost[5]);
+	if (ethernet.ether_type == 0x0800)
+	{
+//		printf("Tipo: %x \n", ethernet.ether_type);
+		printf("ip");
+	}
+	//printf("Tipo: %u \n", (unsigned int)ethernet.ether_type);
+}
 
 int main(int argc,char *argv[])
 {
@@ -49,12 +71,17 @@ int main(int argc,char *argv[])
 	ifr.ifr_flags |= IFF_PROMISC;
 	ioctl(sockd, SIOCSIFFLAGS, &ifr);
 
+	//memset das structs
+	memset(&ethernet,0,sizeof(ethernet));
+
+
 	// recepcao de pacotes
 	while (1) {
    		recv(sockd,(char *) &buff1, sizeof(buff1), 0x0);
-		// impress�o do conteudo - exemplo Endereco Destino e Endereco Origem
-		printf("MAC Destino: %x:%x:%x:%x:%x:%x \n", buff1[0],buff1[1],buff1[2],buff1[3],buff1[4],buff1[5]);
-		printf("MAC Origem:  %x:%x:%x:%x:%x:%x \n\n", buff1[6],buff1[7],buff1[8],buff1[9],buff1[10],buff1[11]);
+
+		memcpy(&ethernet,&buff1,sizeof(ethernet));
+		printEthernet();
+
+		
 	}
 }
-
