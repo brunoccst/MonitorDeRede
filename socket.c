@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 /* Diretorios: net, netinet, linux contem os includes que descrevem */
 /* as estruturas de dados do header dos protocolos   	  	        */
@@ -40,19 +41,59 @@
   int on;
   struct ifreq ifr;
 
-struct ether_header ethernet;
+struct ethernet_package{
+	unsigned char dest[6];
+	unsigned char host[6];
+	unsigned char type[2];
+};
+struct IP_package{
+	unsigned char Version;
+	unsigned char IHL;
+	unsigned char ToS[2];
+	unsigned char ToL[4];
+	unsigned char Id[4];
+	unsigned char Flags_Offset[4];
+	unsigned char TTL[2];
+	unsigned char Potocol[2];
+	unsigned char Checksum[4];
+	unsigned char src_addres[8];
+	unsigned char dst_addres[8];
+	unsigned char options[8];
+};
+struct ethernet_package ethernet;
+struct IP_package ip;
 
-void printEthernet(){
-	printf("MAC Destino: %x:%x:%x:%x:%x:%x \n", ethernet.ether_dhost[0],ethernet.ether_dhost[1],ethernet.ether_dhost[2],ethernet.ether_dhost[3],ethernet.ether_dhost[4],ethernet.ether_dhost[5]);
-	printf("MAC Origem: %x:%x:%x:%x:%x:%x \n", ethernet.ether_shost[0],ethernet.ether_shost[1],ethernet.ether_shost[2],ethernet.ether_shost[3],ethernet.ether_shost[4],ethernet.ether_shost[5]);
-	if (ethernet.ether_type == 0x0800)
-	{
-//		printf("Tipo: %x \n", ethernet.ether_type);
-		printf("ip");
-	}
-	//printf("Tipo: %u \n", (unsigned int)ethernet.ether_type);
+//unsigned short int getType(struct ethernet_package ether){
+//	return ((ether.type[0] << 1) & 0xff00) + ether.type[1];
+//}
+
+void printIP(){	
+	memset(&ip,0,sizeof(ip));
+	memcpy(&ip,&buff1,sizeof(ip));
 }
-
+void printEthernet(){
+	memset(&ethernet,0,sizeof(ethernet));
+	memcpy(&ethernet,&buff1,sizeof(ethernet));
+	printf("MAC Destino: %x:%x:%x:%x:%x:%x \n", ethernet.dest[0],
+												ethernet.dest[1],
+												ethernet.dest[2],
+												ethernet.dest[3],
+												ethernet.dest[4],
+												ethernet.dest[5]);
+	printf("MAC Origem: %x:%x:%x:%x:%x:%x \n", 	ethernet.host[0],
+											   	ethernet.host[1],
+											   	ethernet.host[2],
+											   	ethernet.host[3],
+											   	ethernet.host[4],
+											   	ethernet.host[5]);
+	
+	printf("Tipo: %02x%02x \n", ethernet.type[0],ethernet.type[1]);
+	if( 0x08 == ethernet.type[0] && 
+		0x0 == ethernet.type[1] )
+	{
+		printIP();
+	}
+}
 int main(int argc,char *argv[])
 {
     /* Criacao do socket. Todos os pacotes devem ser construidos a partir do protocolo Ethernet. */
@@ -70,17 +111,20 @@ int main(int argc,char *argv[])
 	ioctl(sockd, SIOCGIFFLAGS, &ifr);
 	ifr.ifr_flags |= IFF_PROMISC;
 	ioctl(sockd, SIOCSIFFLAGS, &ifr);
-
-	//memset das structs
-	memset(&ethernet,0,sizeof(ethernet));
-
-
+	int num_pck = 0;
+	double size_med = 0;
+	int aux = 0; 
 	// recepcao de pacotes
 	while (1) {
    		recv(sockd,(char *) &buff1, sizeof(buff1), 0x0);
-
-		memcpy(&ethernet,&buff1,sizeof(ethernet));
-		printEthernet();
+		if(strlen(buff1) > 0){
+			aux = 2 << (strlen(buff1)-1);
+			size_med = ((size_med * num_pck) + aux)/(num_pck+1);
+			num_pck++;
+			printf("\nTamanho pacote:%d", aux);
+			printf("\nNumero de pacotes recebidos: %d \nTamanho médio de pacotes: %f\n",num_pck,size_med);
+		}
+		//printEthernet();
 
 		
 	}
