@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
+#include <inttypes.h>
 
 /* Diretorios: net, netinet, linux contem os includes que descrevem */
 /* as estruturas de dados do header dos protocolos   	  	        */
@@ -31,6 +32,7 @@
 #include <netinet/in_systm.h> //tipos de dados
 
 #define BUFFSIZE 1518
+#define INTERFACE "enp4s0"
 
 // Atencao!! Confira no /usr/include do seu sisop o nome correto
 // das estruturas de dados dos protocolos.
@@ -41,59 +43,20 @@
   int on;
   struct ifreq ifr;
 
-struct ethernet_package{
-	unsigned char dest[6];
-	unsigned char host[6];
-	unsigned char type[2];
-};
-struct IP_package{
-	unsigned char Version;
-	unsigned char IHL;
-	unsigned char ToS[2];
-	unsigned char ToL[4];
-	unsigned char Id[4];
-	unsigned char Flags_Offset[4];
-	unsigned char TTL[2];
-	unsigned char Potocol[2];
-	unsigned char Checksum[4];
-	unsigned char src_addres[8];
-	unsigned char dst_addres[8];
-	unsigned char options[8];
-};
-struct ethernet_package ethernet;
-struct IP_package ip;
+//variaveis dos pacotes
+struct ether_header ethernet;
 
-//unsigned short int getType(struct ethernet_package ether){
-//	return ((ether.type[0] << 1) & 0xff00) + ether.type[1];
-//}
+//metodos para escrever os pacotes na tela
+void printEthernet()
+{
+	printf("-----------------\n[ETHERNET]\n");
+	printf("MAC Destino: %s \n", (char *) ether_ntoa((struct ether_addr *) ethernet.ether_dhost));
 
-void printIP(){	
-	memset(&ip,0,sizeof(ip));
-	memcpy(&ip,&buff1,sizeof(ip));
+	printf("MAC Origem: %s \n", (char *) ether_ntoa((struct ether_addr *) ethernet.ether_shost));
+
+	printf("Tipo: %x\n", ntohs(ethernet.ether_type));
 }
-void printEthernet(){
-	memset(&ethernet,0,sizeof(ethernet));
-	memcpy(&ethernet,&buff1,sizeof(ethernet));
-	printf("MAC Destino: %x:%x:%x:%x:%x:%x \n", ethernet.dest[0],
-												ethernet.dest[1],
-												ethernet.dest[2],
-												ethernet.dest[3],
-												ethernet.dest[4],
-												ethernet.dest[5]);
-	printf("MAC Origem: %x:%x:%x:%x:%x:%x \n", 	ethernet.host[0],
-											   	ethernet.host[1],
-											   	ethernet.host[2],
-											   	ethernet.host[3],
-											   	ethernet.host[4],
-											   	ethernet.host[5]);
-	
-	printf("Tipo: %02x%02x \n", ethernet.type[0],ethernet.type[1]);
-	if( 0x08 == ethernet.type[0] && 
-		0x0 == ethernet.type[1] )
-	{
-		printIP();
-	}
-}
+
 int main(int argc,char *argv[])
 {
     /* Criacao do socket. Todos os pacotes devem ser construidos a partir do protocolo Ethernet. */
@@ -105,27 +68,35 @@ int main(int argc,char *argv[])
     }
 
 	// O procedimento abaixo eh utilizado para "setar" a interface em modo promiscuo
-	strcpy(ifr.ifr_name, "enp4s0");
+	strcpy(ifr.ifr_name, INTERFACE);
 	if(ioctl(sockd, SIOCGIFINDEX, &ifr) < 0)
 		printf("erro no ioctl!");
 	ioctl(sockd, SIOCGIFFLAGS, &ifr);
 	ifr.ifr_flags |= IFF_PROMISC;
 	ioctl(sockd, SIOCSIFFLAGS, &ifr);
-	int num_pck = 0;
+
+	int recvPackages = 0, packSize = 0;
 	double size_med = 0;
-	int aux = 0; 
+
 	// recepcao de pacotes
 	while (1) {
    		recv(sockd,(char *) &buff1, sizeof(buff1), 0x0);
-		if(strlen(buff1) > 0){
-			aux = 2 << (strlen(buff1)-1);
-			size_med = ((size_med * num_pck) + aux)/(num_pck+1);
-			num_pck++;
-			printf("\nTamanho pacote:%d", aux);
-			printf("\nNumero de pacotes recebidos: %d \nTamanho médio de pacotes: %f\n",num_pck,size_med);
-		}
-		//printEthernet();
+		packSize = 2 << (strlen(buff1)-1); //2^(package size) [in bytes]
+		size_med = ((size_med * recvPackages) + packSize)/(recvPackages+1);
+		recvPackages++;
 
-		
+		printf("Numero de pacotes recebidos: %d\n", recvPackages);
+		printf("Tamanho médio de pacotes: %f\n\n", size_med);
+
+		//ETHERNET
+		memcpy(&ethernet,&buff1,sizeof(ethernet));
+		switch (ntohs(ethernet.ether_type))
+		{
+			case ETH_P_IP: //IPv4
+				break;
+			case ETH_P_IPV6: //IPv6
+				break;
+		}
 	}
 }
+
