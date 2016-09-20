@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------*/
-/* Exemplo Socket Raw - Captura pacotes recebidos na interface */
+/* Exemplo Socket Raw - Captura pacotes recebidos na INTERFACE_DEFAULT */
 /*-------------------------------------------------------------*/
 
 #include <stdlib.h>
@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <limits.h>
 #include <unistd.h>
 #include <math.h>
 #include <inttypes.h>
@@ -32,7 +33,6 @@
 #include <netinet/in_systm.h> //tipos de dados
 
 #define BUFFSIZE 1518
-#define INTERFACE "enp4s0"
 
 // Atencao!! Confira no /usr/include do seu sisop o nome correto
 // das estruturas de dados dos protocolos.
@@ -42,20 +42,6 @@
   int sockd;
   int on;
   struct ifreq ifr;
-
-//variaveis dos pacotes
-struct ether_header ethernet;
-
-//metodos para escrever os pacotes na tela
-void printEthernet()
-{
-	printf("-----------------\n[ETHERNET]\n");
-	printf("MAC Destino: %s \n", (char *) ether_ntoa((struct ether_addr *) ethernet.ether_dhost));
-
-	printf("MAC Origem: %s \n", (char *) ether_ntoa((struct ether_addr *) ethernet.ether_shost));
-
-	printf("Tipo: %x\n", ntohs(ethernet.ether_type));
-}
 
 int main(int argc,char *argv[])
 {
@@ -68,33 +54,75 @@ int main(int argc,char *argv[])
     }
 
 	// O procedimento abaixo eh utilizado para "setar" a interface em modo promiscuo
-	strcpy(ifr.ifr_name, INTERFACE);
+	char *interfaceDoUsuario = argv[1];
+	strcpy(ifr.ifr_name, interfaceDoUsuario);
+
 	if(ioctl(sockd, SIOCGIFINDEX, &ifr) < 0)
-		printf("erro no ioctl!");
+		printf("\nerro no ioctl!\n\n");
 	ioctl(sockd, SIOCGIFFLAGS, &ifr);
 	ifr.ifr_flags |= IFF_PROMISC;
 	ioctl(sockd, SIOCSIFFLAGS, &ifr);
 
-	int recvPackages = 0, packSize = 0;
+	//variaveis de monitoramento
+	int recvPackages = 0;
+	int minPackSize = INT_MAX;
+	int maxPackSize = 0;
+	int packSize = 0;
 	double size_med = 0;
+	int posicaoNoBuffer = 0;
+
+	//variaveis de pacotes
+	struct ether_header ethernet;
+	struct ip ipv4;
+	struct ip6_hdr ipv6;
 
 	// recepcao de pacotes
 	while (1) {
    		recv(sockd,(char *) &buff1, sizeof(buff1), 0x0);
+
 		packSize = 2 << (strlen(buff1)-1); //2^(package size) [in bytes]
+
+		if (packSize < minPackSize) minPackSize = packSize;
+		if (packSize > maxPackSize) maxPackSize = packSize;
+
 		size_med = ((size_med * recvPackages) + packSize)/(recvPackages+1);
 		recvPackages++;
 
 		printf("Numero de pacotes recebidos: %d\n", recvPackages);
-		printf("Tamanho médio de pacotes: %f\n\n", size_med);
+		printf("Tamanho médio de pacotes: %i\n", (int)size_med);
+		printf("Menor pacote recebido ate o momento: %i\n", (int)minPackSize);
+		printf("Maior pacote recebido ate o momento: %i\n\n", (int)maxPackSize);
 
 		//ETHERNET
 		memcpy(&ethernet,&buff1,sizeof(ethernet));
+		posicaoNoBuffer = sizeof(ethernet);
 		switch (ntohs(ethernet.ether_type))
 		{
 			case ETH_P_IP: //IPv4
+				memcpy(&ipv4,&buff1[posicaoNoBuffer], sizeof(ipv4));
+				posicaoNoBuffer += sizeof(ipv4);
+				switch (ipv4.ip_p)
+				{
+					case 1: //ICMP
+						break;
+					case 6: //TCP
+						break;
+					case 17: //UDP
+						break;
+				}
 				break;
 			case ETH_P_IPV6: //IPv6
+				memcpy(&ipv6,&buff1[posicaoNoBuffer], sizeof(ipv6));
+				posicaoNoBuffer += sizeof(ipv6);
+				switch (ipv6.ip6_nxt)
+				{
+					case 58: //IPv6-ICMP
+						break;
+					case 6: //TCP
+						break;
+					case 17: //UDP
+						break;
+				}
 				break;
 		}
 	}
