@@ -11,7 +11,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <math.h>
-#include <inttypes.h>
 
 /* Diretorios: net, netinet, linux contem os includes que descrevem */
 /* as estruturas de dados do header dos protocolos   	  	        */
@@ -31,6 +30,13 @@
 #include <arpa/inet.h> //funcoes para manipulacao de enderecos IP
 
 #include <netinet/in_systm.h> //tipos de dados
+
+//Incluindo as funcionalidades que estao separadas em arquivos diferentes
+#include "Funcionalidades/geral.h"
+#include "Funcionalidades/enlace.h"
+#include "Funcionalidades/rede.h"
+#include "Funcionalidades/transporte.h"
+#include "Funcionalidades/aplicacao.h"
 
 #define BUFFSIZE 1518
 
@@ -65,8 +71,6 @@ int main(int argc,char *argv[])
 
 	//variaveis de monitoramento
 	int recvPackages = 0;
-	int minPackSize = INT_MAX;
-	int maxPackSize = 0;
 	int packSize = 0;
 	double size_med = 0;
 	int posicaoNoBuffer = 0;
@@ -75,27 +79,23 @@ int main(int argc,char *argv[])
 	struct ether_header ethernet;
 	struct ip ipv4;
 	struct ip6_hdr ipv6;
+	struct icmphdr icmp;
 
 	// recepcao de pacotes
 	while (1) {
    		recv(sockd,(char *) &buff1, sizeof(buff1), 0x0);
 
-		packSize = 2 << (strlen(buff1)-1); //2^(package size) [in bytes]
+		printf("\n\n------------[INICIO DO PACOTE]------------\n\n");
 
-		if (packSize < minPackSize) minPackSize = packSize;
-		if (packSize > maxPackSize) maxPackSize = packSize;
-
-		size_med = ((size_med * recvPackages) + packSize)/(recvPackages+1);
-		recvPackages++;
-
-		printf("Numero de pacotes recebidos: %d\n", recvPackages);
-		printf("Tamanho médio de pacotes: %i\n", (int)size_med);
-		printf("Menor pacote recebido ate o momento: %i\n", (int)minPackSize);
-		printf("Maior pacote recebido ate o momento: %i\n\n", (int)maxPackSize);
-
-		//ETHERNET
+		//Ethernet
 		memcpy(&ethernet,&buff1,sizeof(ethernet));
 		posicaoNoBuffer = sizeof(ethernet);
+
+		/******<GERAL>******/
+		analisaTamanho(buff1);
+		printTamanhos();
+		/******</GERAL>******/
+
 		switch (ntohs(ethernet.ether_type))
 		{
 			case ETH_P_IP: //IPv4
@@ -104,6 +104,10 @@ int main(int argc,char *argv[])
 				switch (ipv4.ip_p)
 				{
 					case 1: //ICMP
+						memcpy(&icmp, &buff1[posicaoNoBuffer], sizeof(icmp));
+						posicaoNoBuffer += sizeof(icmp);
+						analisaICMP(icmp);
+						printICMP();
 						break;
 					case 6: //TCP
 						break;
@@ -125,6 +129,8 @@ int main(int argc,char *argv[])
 				}
 				break;
 		}
+
+		printf("\n\n------------[FIM DO PACOTE]------------\n\n");
 	}
 }
 
