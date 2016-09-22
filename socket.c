@@ -100,6 +100,7 @@ int main(int argc,char *argv[])
 		{
 			case ETH_P_IP: //IPv4
 				memcpy(&ipv4,&buff1[posicaoNoBuffer], sizeof(ipv4));
+                analisaIP(ipv4);
 				posicaoNoBuffer += sizeof(ipv4);
 				switch (ipv4.ip_p)
 				{

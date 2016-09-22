@@ -1,0 +1,13 @@
+#ifndef REDES_H
+#define REDES_H
+#include <stdint.h>
+typedef struct ent{
+    in_addr_t addr;
+    int qtd;
+} entry;
+typedef uint32_t in_addr_t;
+
+int get_qtd_addr(in_addr_t addr);
+void include_addr(in_addr_t addr);
+
+#endif REDES_H
