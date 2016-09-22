@@ -25,7 +25,7 @@ void analisaICMP(struct icmphdr icmp)
     }
     else if(icmp.type == ICMP_ECHOREPLY)
     {
-        recvICMPRequest++;
+        recvICMPReply++;
     }
 
 }
@@ -37,7 +37,7 @@ void analisaICMP6()
 
 void printICMP()
 {
-	printf("Pacotes ICMP recebidos.............%i", recvICMP);
-	printf("	Request....................%i", recvICMPRequest);
-	printf("	Reply......................%i", recvICMP);
+	printf("Pacotes ICMP recebidos.............%i\n", recvICMP);
+	printf("	Request....................%i\n", recvICMPRequest);
+	printf("	Reply......................%i\n", recvICMPReply);
 }

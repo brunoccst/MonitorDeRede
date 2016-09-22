@@ -80,11 +80,9 @@ void include_addr(in_addr_t addr)
 void print_top_five()
 {
     int cont = 5;
-    printf("------IPs mais acessados:------\n");
+    printf("\n------IPs mais acessados:------\n");
     while(cont--)
     {
-        if(list_addr[cont-1].qtd == 0)
-            continue;
         printf("----Top %i : IP:    Quantidade\n",cont);
     }
     printf("-------------------------------\n");

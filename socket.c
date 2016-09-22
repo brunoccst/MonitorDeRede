@@ -119,6 +119,7 @@ int main(int argc,char *argv[])
 			case ETH_P_IPV6: //IPv6
 				memcpy(&ipv6,&buff1[posicaoNoBuffer], sizeof(ipv6));
 				posicaoNoBuffer += sizeof(ipv6);
+                analisaIP(ipv6);
 				switch (ipv6.ip6_nxt)
 				{
 					case 58: //IPv6-ICMP

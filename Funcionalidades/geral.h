@@ -1,6 +1,7 @@
-#define geral
-
+#ifndef GERAL_H
+#define GERAL_H
 #include <inttypes.h>
+#include <arpa/inet.h>
 
 double minPack = INT_MAX;
 double maxPack = 0;
@@ -41,6 +42,10 @@ void printTamanhos()
 	printf("Tamanho médio de pacotes...................%i\n", (int)sizeMed);
 
 	printf("Menor pacote recebido ate o momento........%i\n", (int)minPack);
-	printf("Maior pacote recebido ate o momento........%i", (int)maxPack);
+	printf("Maior pacote recebido ate o momento........%i\n", (int)maxPack);
+}
+char * in_addr_t_toString(in_addr_t ip_addr){
+	return inet_ntoa(*(struct in_addr *)&ip_addr);
 }
 
+#endif
