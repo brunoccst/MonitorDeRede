@@ -70,9 +70,6 @@ int main(int argc,char *argv[])
 	ioctl(sockd, SIOCSIFFLAGS, &ifr);
 
 	//variaveis de monitoramento
-	int recvPackages = 0;
-	int packSize = 0;
-	double size_med = 0;
 	int posicaoNoBuffer = 0;
 
 	//variaveis de pacotes
@@ -85,7 +82,6 @@ int main(int argc,char *argv[])
 	while (1) {
    		recv(sockd,(char *) &buff1, sizeof(buff1), 0x0);
 
-		printf("\n\n------------[INICIO DO PACOTE]------------\n\n");
 
 		//Ethernet
 		memcpy(&ethernet,&buff1,sizeof(ethernet));
@@ -93,7 +89,6 @@ int main(int argc,char *argv[])
 
 		/******<GERAL>******/
 		analisaTamanho(buff1);
-		printTamanhos();
 		/******</GERAL>******/
 
 		switch (ntohs(ethernet.ether_type))
@@ -108,31 +103,34 @@ int main(int argc,char *argv[])
 						memcpy(&icmp, &buff1[posicaoNoBuffer], sizeof(icmp));
 						posicaoNoBuffer += sizeof(icmp);
 						analisaICMP(icmp);
-						printICMP();
 						break;
 					case 6: //TCP
+                        posicaoNoBuffer += load_tcp(&buff1[posicaoNoBuffer]);
+
 						break;
 					case 17: //UDP
+                        posicaoNoBuffer += load_udp(&buff1[posicaoNoBuffer]);
 						break;
 				}
 				break;
 			case ETH_P_IPV6: //IPv6
 				memcpy(&ipv6,&buff1[posicaoNoBuffer], sizeof(ipv6));
 				posicaoNoBuffer += sizeof(ipv6);
-                analisaIP(ipv6);
+                analisaIP6(ipv6);
 				switch (ipv6.ip6_nxt)
 				{
 					case 58: //IPv6-ICMP
 						break;
 					case 6: //TCP
+                        posicaoNoBuffer += load_tcp(&buff1[posicaoNoBuffer]);
 						break;
 					case 17: //UDP
+                        posicaoNoBuffer += load_udp(&buff1[posicaoNoBuffer]);
 						break;
 				}
 				break;
 		}
-
-		printf("\n\n------------[FIM DO PACOTE]------------\n\n");
+        printData();
 	}
 }
 

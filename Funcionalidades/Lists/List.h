@@ -1,34 +1,64 @@
 #ifndef LIST_H
 #define LIST_H
 #include <stdint.h>
-#include "../geral.h"
 typedef uint32_t in_addr_t;
+
+typedef enum {
+    UDP,TCP
+} type_port;
 typedef struct ent
 {
     in_addr_t addr;
     int qtd;
 } entry;
 
+typedef struct port_ent
+{
+    u_int16_t port;
+    int qtd;
+    type_port type;
+} port;
+
 int cont_addr = 0;
-int size = sizeof(entry)*10;//Tamanho inicial
+int size_addr = sizeof(entry)*10;//Tamanho inicial
 entry * list_addr = 0;
+
+
+int cont_port = 0;
+int size_port = sizeof(port)*10;//Tamanho inicial
+port * list_port = 0;
 
 
 void init(){
     if(!list_addr){
-        list_addr = (entry *)malloc(size);
-        memset(list_addr,0,size);
+        list_addr = (entry *)malloc(size_addr);
+        memset(list_addr,0,size_addr);
+    }
+    if(!list_port){
+        list_port = (port *)malloc(size_port);
+        memset(list_port,0,size_port);
     }
 }
 void reallocate_addr()
 {
-    if(size <= sizeof(entry) * cont_addr)
+    if(size_addr <= sizeof(entry) * cont_addr)
     {
-        size*=2;
-        entry * list_addr_aux = (entry *) malloc(size);
-        memset(list_addr_aux,0,size);
-        memcpy(list_addr_aux,list_addr, size/2);
+        size_addr*=2;
+        entry * list_addr_aux = (entry *) malloc(size_addr);
+        memset(list_addr_aux,0,size_addr);
+        memcpy(list_addr_aux,list_addr, size_addr/2);
         list_addr = list_addr_aux;
+    }
+}
+void reallocate_port()
+{
+    if(size_port <= sizeof(port) * cont_port)
+    {
+        size_port*=2;
+        port * list_port_aux = (port *) malloc(size_port);
+        memset(list_port_aux,0,size_port);
+        memcpy(list_port_aux,list_port, size_port/2);
+        list_port = list_port_aux;
     }
 }
 
@@ -47,11 +77,22 @@ entry * find_addr(in_addr_t addr)
     return 0;
 }
 
-int get_qtd_addr(in_addr_t addr)
+port * find_port(u_int16_t port_number,type_port type)
 {
-    entry * addr_entry =  find_addr(addr);
-    return addr_entry ? (*addr_entry).qtd : 0;
+    init();
+    int aux = cont_port;
+    port * port_entry = list_port;
+    while(aux--)
+    {
+        if(port_number == (*port_entry).port && (*port_entry).type == type)
+        {
+            return port_entry;
+        }
+        port_entry++;
+    }
+    return 0;
 }
+
 void include_addr(in_addr_t addr)
 {
     entry * addr_entry =  find_addr(addr);
@@ -82,18 +123,37 @@ void include_addr(in_addr_t addr)
     }
 }
 
-void print_top_five()
+
+void include_port(u_int16_t port_number, type_port type)
 {
-    int cont = 5 < cont_addr ? 5 : cont_addr;
-    printf("------IPs mais acessados:------\n");
-    char * s = 0;
-    while(cont)
+    port * port_entry =  find_port(port_number,type);
+    if(port_entry)
     {
-        s = in_addr_t_toString(list_addr[cont-1].addr);
-        printf("----Top %i : IP: %s    Quantidade: %i\n",cont,s,list_addr[cont-1].qtd);
-        cont--;
+        (*port_entry).qtd++;
+        if(port_entry > &list_port[0])
+        {
+            port * port_aux = (port *)malloc(sizeof(port));
+            port * port_anterior = port_entry -1;
+            while((*port_anterior).qtd < (*port_entry).qtd)
+            {
+                *port_aux = *port_entry;
+                *port_entry = *port_anterior;
+                *port_anterior = *port_aux;
+                if(port_anterior == &list_port[0])
+                    break;
+                port_entry--;
+                port_anterior--;
+            }
+        }
     }
-    printf("-------------------------------\n");
+    else
+    {
+        reallocate_port();
+        list_port[cont_port].port = port_number;
+        list_port[cont_port].type = type;
+        list_port[cont_port++].qtd = 1;
+    }
 }
+
 
 #endif //LIST_H
